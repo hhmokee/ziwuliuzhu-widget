@@ -1,0 +1,203 @@
+﻿<p align="center">
+  <img src="https://img.shields.io/badge/platform-iOS%20%7C%20macOS-lightgrey" alt="platform" />
+  <img src="https://img.shields.io/badge/Scriptable-required-blue" alt="Scriptable" />
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="license" />
+</p>
+
+# 子午流注 · 纳甲法开穴 Widget
+
+> 一个 [Scriptable](https://scriptable.app/) 小组件，根据子午流注**纳甲法**实时推算当前时辰的开穴，并以色示经、日夜适配，随手一瞥即可知此刻当开何穴。
+>
+> A Scriptable widget that calculates the currently open acupoint based on the **Na Jia method** of Zi Wu Liu Zhu (Midnight-Noon Ebb-Flow), with Five-Element color coding and day/night theme support.
+
+---
+
+## 目录 · Contents
+
+- [背景](#背景--background)
+- [功能特性](#功能特性--features)
+- [预览](#预览--preview)
+- [安装](#安装--installation)
+- [使用方法](#使用方法--usage)
+- [技术原理](#技术原理--technical-principles)
+  - [纳甲法口诀](#纳甲法口诀)
+  - [返本还原](#返本还原)
+  - [夫妻互用](#夫妻互用)
+  - [辰时特殊处理](#辰时特殊处理)
+  - [补穴规则](#补穴规则)
+- [数据结构](#数据结构--data-structures)
+- [项目结构](#项目结构--project-structure)
+- [自定义](#自定义--customization)
+- [许可](#许可--license)
+
+---
+
+## 背景 · Background
+
+**子午流注**是中医针灸学中按时取穴的古典针法，认为人体气血在十二经脉中的流注随昼夜时辰而有盛衰开阖。**纳甲法**以**日干**为主推算当日各时辰的开穴，按井、荥、输、经、合五输穴逐时辰流注，阳日开阳经，阴日开阴经。
+
+本 Widget 将该理论编码为 JavaScript 算法，通过 Scriptable 在 iOS / macOS 桌面实时展示当前时辰应当开启的穴位。
+
+---
+
+## 功能特性 · Features
+
+- **纳甲法主表** — 按日干 + 时支直接查表开穴
+- **返本还原** — 逢输穴时自动追加当日值日经的原穴
+- **夫妻互用** — 纳甲法无穴时自动转向合日干支查表
+- **辰时气纳三焦 / 血归包络** — 辰时额外开三焦经、心包经合穴
+- **补穴规则** — 主表与夫妻互用皆无穴时，按阴阳同异规则推算备选穴位
+- **五行配色** — 根据开穴所属经络的五行属性自动切换背景色
+- **日夜模式** — 23:00–06:00 自动切换为深色背景
+- **信息完整** — 公历时间、日干支、时辰、阴阳属性、开穴名称一屏呈现
+
+---
+
+## 预览 · Preview
+
+| 日间（胆经开穴） | 夜间（肝经开穴） |
+|:---:|:---:|
+| *截图待补充* | *截图待补充* |
+
+---
+
+## 安装 · Installation
+
+1. 在 App Store 下载 [Scriptable](https://apps.apple.com/app/scriptable/id1405459188)
+2. 打开 Scriptable，点击右上角 `+` 新建脚本
+3. 将仓库中的 `子午流注纳甲法.js` 全文粘贴进去
+4. 点击脚本名称（顶部标题栏）可重命名，例如「子午流注」
+5. 返回桌面，添加 Scriptable 中号 Widget，长按编辑选择此脚本
+
+> **注意**：本脚本使用 `widget.presentMedium()`，请选择**中号 (Medium)** Widget 尺寸。
+
+---
+
+## 使用方法 · Usage
+
+将 Widget 添加到桌面后，它会**自动根据当前系统时间**运算并显示：
+
+| 显示内容 | 说明 |
+|:---|:---|
+| 公历日期 + 时间 | 系统当前日期时间（每秒刷新） |
+| 日干支 | 当日干支，如「甲子日」 |
+| 时辰 | 当前时辰，如「🕒 辰时」 |
+| 开穴 | 纳甲法计算结果，含经络、五输穴类型、穴名 |
+| 返本还原穴 | 逢输穴时显示当值日经原穴 |
+| 阴阳属性 | ☯️ 阳 / 阴 |
+
+---
+
+## 技术原理 · Technical Principles
+
+### 纳甲法口诀
+
+纳甲法的核心是一套「日干 × 时支 → 穴位」的映射表，原文口诀如：
+> 甲日戌时胆窍阴，丙子时中小肠前……
+
+代码将其建模为 `acupointMantraMap` 二维查找表：
+
+```js
+const acupointMantraMap = {
+    ''甲'': {
+        ''戌'': { acupoint: ''足窍阴'', type: ''井'', meridian: ''胆经'' },
+        ''子'': { acupoint: ''前谷'',   type: ''荥'', meridian: ''小肠经'' },
+        // ...
+    },
+    // ... 乙 ~ 癸
+};
+```
+
+### 返本还原
+
+当按纳甲法开到的穴位为**输穴**时，需「返本还原」—— 加开当日值日经的**原穴**。例如甲日胆经值日，遇输穴则加开胆经原穴「丘墟」。
+
+### 夫妻互用
+
+若当前日干在当前时支无纳甲法穴位，则转向**合日干支**（甲↔己、乙↔庚、丙↔辛、丁↔壬、戊↔癸）查表。来源于「刚柔相配，阴阳相合」的合日互用原则。
+
+### 辰时特殊处理
+
+辰时（7:00–9:00）为气血流注的特殊节点，额外开启：
+- **三焦经合穴**：天井
+- **心包经合穴**：曲泽
+
+### 补穴规则
+
+当纳甲法 + 夫妻互用均无结果时，按以下规则推算：
+
+| 条件 | 策略 |
+|:---|:---|
+| 日干与时辰同阴阳 | 按本日值日经，依时辰取五输穴（子午井、寅申输、辰戌经、丑未合…） |
+| 日干与时辰异阴阳 | 转向合日干支重新调用纳甲算法 |
+
+---
+
+## 数据结构 · Data Structures
+
+### 核心映射表
+
+| 变量 | 用途 |
+|:---|:---|
+| `acupointMantraMap` | 纳甲法主表（日干 × 时支 → 穴位） |
+| `meridianShuPointMap` | 十二正经五输穴全集（井荥输经合） |
+| `meridianYuanPointMap` | 十二经原穴映射 |
+| `combinedDayGanMap` | 合日干支（甲己合土…） |
+| `dayGanMeridianMap` | 日干 → 值日经映射 |
+| `meridianFiveElements` | 经络 → 五行属性 |
+
+### 关键函数
+
+| 函数 | 职责 |
+|:---|:---|
+| `getDayGanZhi(date)` | 用天文公式计算公历日期对应的日干支 |
+| `getShichen(hour)` | 小时 → 时辰映射 |
+| `getShuPoint(dayGan, shiZhi)` | 核心穴位查找（含返本还原、夫妻互用、辰时处理） |
+| `getSupplementaryAcupoint(...)` | 补穴规则（阴阳同异判断） |
+| `getMeridianFiveElementColor(...)` | 经络 → 五行颜色 |
+| `wrapText(...)` | 智能换行（中英文混排宽度计算） |
+
+---
+
+## 项目结构 · Project Structure
+
+```
+.
+├── 子午流注纳甲法.js    # 主脚本（直接粘贴到 Scriptable 使用）
+├── README.md            # 本文件
+└── screenshot/          # 截图（待添加）
+```
+
+---
+
+## 自定义 · Customization
+
+在脚本中可调整以下参数：
+
+```js
+const widgetWidth = 300;   // Widget 实际宽度，影响文字换行阈值
+```
+
+颜色可在 `fiveElementColors` 对象中按需修改：
+
+```js
+const fiveElementColors = {
+    ''木'': ''#228B22'',  // 青绿
+    ''火'': ''#FF4500'',  // 赤红
+    ''土'': ''#DAA520'',  // 金黄
+    ''金'': ''#C0C0C0'',  // 银白
+    ''水'': ''#00A3E0'',  // 深蓝
+};
+```
+
+---
+
+## 许可 · License
+
+MIT License.
+
+---
+
+<p align="center">
+  <sub>Made with ☯️ for acupuncture enthusiasts · 为针灸爱好者而生</sub>
+</p>
